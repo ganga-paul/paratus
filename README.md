@@ -78,7 +78,7 @@ grep ">" /shared/input_genomes/paratus-bat/mAetAle1.hap1.cur.20250328/mAetAle1.h
 ```
 Once screened the output (chromname_checking_0305.txt here) is manually checked for presence of any chromosome present in the genomes.
 
-🔄 **Automating Unwanted chromosomes removal for Multiple Genomes
+🔄 **Automating Unwanted chromosomes removal for Multiple Genomes**
 To streamline the process of Unwanted chromosomes removal for multiple genomes, we use a loop that:
 
 ## Genome Cleaning Process
