@@ -14,3 +14,45 @@ This pipeline is designed to identify orthologous genes and detect gene loss in 
 ### 3. TOGA
 - Use the alignment chains and human annotation to identify orthologous genes.
 - Classify the gene status.
+
+## Pipeline Breakdown
+
+### Step 0: Genome Download and Cleaning
+- Download raw genome assemblies.
+- Clean and preprocess genomes for downstream analysis.
+
+---
+
+### Part 1: Prepare Genomes
+**Step 1:** `BuildDatabase` and `RepeatModeler`  
+**Step 2:** `RepeatClassifier`  
+**Step 3:** `RepeatMasker`  
+
+---
+
+### Part 2: Make LASTZ Chains
+**Step 4:** `Make_lastz_chains`  
+- Align masked genomes to the human reference genome (**hg38**).  
+- Generate alignment chains.
+
+---
+
+### Part 3: TOGA
+**Step 5:** `TOGA`  
+- Use the alignment chains and human annotation to identify orthologous genes.  
+- Classify gene status.
+
+---
+
+## Repository Links
+
+- **Genome Cleaning Scripts:**  
+  [https://github.com/paratusbio/Positive-selection/tree/el-scripts/GENE_LOSS/Genome_Cleaning](https://github.com/paratusbio/Positive-selection/tree/el-scripts/GENE_LOSS/Genome_Cleaning)  
+
+- **Batch Generation Scripts for Each Step:**  
+  [https://github.com/paratusbio/Positive-selection/tree/el-scripts/GENE_LOSS](https://github.com/paratusbio/Positive-selection/tree/el-scripts/GENE_LOSS)  
+
+- **Sanity Check Scripts for Each Step:**  
+  [https://github.com/paratusbio/Positive-selection/tree/el-scripts/GENE_LOSS/Sanity_checks](https://github.com/paratusbio/Positive-selection/tree/el-scripts/GENE_LOSS/Sanity_checks)  
+
+---
