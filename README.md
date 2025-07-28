@@ -71,3 +71,22 @@ aws s3 cp s3://paratus-ven-elucidata-collab/positive_selection/input_genomes/par
 sudo chmod 777 /shared/input_genomes/paratus-bat/mAetAle1.hap1.cur.20250328/mAetAle1.hap1.cur.20250328.fa.gz
 gunzip -c /shared/input_genomes/paratus-bat/mAetAle1.hap1.cur.20250328/mAetAle1.hap1.cur.20250328.fa.gz > /shared/input_genomes/paratus-bat/mAetAle1.hap1.cur.20250328/mAetAle1.hap1.cur.20250328.fa
 ```
+Once the genomes are downloaded and unzipped they are screened for presence of unwanted chromosomes (defined by Paratus ie. X, Y, MT, Z chromosomes ). 
+```
+echo "/shared/input_genomes/paratus-bat/mAetAle1.hap1.cur.20250328/mAetAle1.hap1.cur.20250328.fa" >> chromname_checking_0305.txt
+grep ">" /shared/input_genomes/paratus-bat/mAetAle1.hap1.cur.20250328/mAetAle1.hap1.cur.20250328.fa | grep -i -e "M" -e "X" -e "Y" -e "Z" >> chromname_checking_0305.txt
+```
+Once screened the output (chromname_checking_0305.txt here) is manually checked for presence of any chromosome present in the genomes.
+
+🔄 **Automating Unwanted chromosomes removal for Multiple Genomes
+To streamline the process of Unwanted chromosomes removal for multiple genomes, we use a loop that:
+
+## Genome Cleaning Process
+
+- **Reads chromosome names** from a text file:  
+  `chromosomes_to_removev3.txt`
+
+- **Reads genome names** (absolute file paths of FASTA files) from:  
+  `genomev3.txt`
+
+- **Removes the specifi
