@@ -58,7 +58,7 @@ This pipeline is designed to identify orthologous genes and detect gene loss in 
 ---
 
 
-## Step 0: Genome Download and Cleaning (Detailed)
+## Step 0: Genome Download and Cleaning
 🔄 **Manually Downloading and Scoping Multiple Genomes for Unwanted Chromosomes**  
 - Genomes are downloaded from the **S3 path** provided by Paratus using the `aws s3 cp` command.  
 - Downloaded genomes are arranged in a **predetermined directory structure** (explained in detail in Step 1).  
