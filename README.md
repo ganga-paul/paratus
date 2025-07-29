@@ -573,4 +573,4 @@ The script creates a tab-separated summary file with the following columns:
 </div>
 
 ## 🔁 Workflow Overview for RepeatMasker
-![](classifier_scripts.png)
+![](repeatmasker.png)
