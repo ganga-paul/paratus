@@ -89,4 +89,78 @@ Once screened the output (chromname_checking_0305.txt here) is manually checked 
 
 - **Removes the chromosomes from genomes** using the custom script `genome_cleaner.sh`
 
-- 
+
+## 📁 Required Input File: `chromosomes_to_removev3.txt` 
+
+This file contains a list of chromosomes names. They are fetched from file chromname_checking_0305.txt after manual checks.
+
+Example contents:
+```
+SUPER_X
+SUPER_Y
+SUPER_X_unloc_1
+SUPER_Y_unloc_2
+SUPER_X_unloc_4
+SUPER_X_unloc_3
+SUPER_X_unloc_5
+SUPER_Y_unloc_1
+SUPER_X_unloc_2
+SUPER_X
+```
+
+## 📁 Required Input File: `genomev3.txt`
+
+This file contains a list of `genome` fasta files absolute paths. They are also fetched from file `chromname_checking_0305.txt` after manual checks.
+
+Example contents:
+```
+/shared/input_genomes/paratus-bat/mAetAle1.hap1.cur.20250328/mAetAle1.hap1.cur.20250328.fa
+/shared/input_genomes/paratus-bat/mArtInt1.hap1.cur.20230911/mArtInt1.hap1.cur.20230911.fa
+/shared/input_genomes/paratus-bat/mArtLit.hap1.cur.20230911/mArtLit.hap1.cur.20230911.fa
+/shared/input_genomes/paratus-bat/mAseTrd1.HiC.hap1.20240423/mAseTrd1.HiC.hap1.20240423.fa
+/shared/input_genomes/paratus-bat/mAntDub1_hap1.cur.20250116/mAntDub1_hap1.cur.20250116.fa
+/shared/input_genomes/paratus-bat/mBraNan1.HiC.hap1.decontam.20240328/mBraNan1.HiC.hap1.decontam.20240328.fa
+```
+
+## 🚀 Script to remove the chromosomes from genomes
+genome_cleaner.sh
+
+```
+#!/bin/bash
+
+# Input lists
+genome_list="genomev3.txt"
+chromosome_list="chromosomes_to_removev3.txt"
+
+# Build the regex pattern from chromosomes
+chrom_pattern=$(paste -sd'|' "$chromosome_list")
+
+# Loop through all genomes
+while read -r genome; do
+    echo "Processing $genome..."
+
+    output_fasta="${genome%.fa}_filtered.fa"
+    log_file="${genome%.fa}_removed_chromosomes.log"
+
+    # Reset log
+    > "$log_file"
+
+    awk -v pattern="$chrom_pattern" -v logfile="$log_file" '
+    BEGIN { remove = 0 }
+    /^>/ {
+        if ($0 ~ "^>(" pattern ")") {
+            print substr($0,2) >> logfile  # log the chromosome name without ">"
+            remove = 1
+        } else {
+            remove = 0
+        }
+    }
+    remove == 0
+    ' "$genome" > "$output_fasta"
+
+    echo "Saved filtered genome to $output_fasta"
+    echo "Removed chromosomes logged to $log_file"
+done < "$genome_list"
+```
+
+
