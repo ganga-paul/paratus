@@ -163,4 +163,159 @@ while read -r genome; do
 done < "$genome_list"
 ```
 
+## 🔍 Explanation
 
+- Reads a list of genome FASTA files (genomev3.txt) and chromosomes to remove (chromosomes_to_removev3.txt)
+
+- Builds a regex pattern from chromosome names for matching headers
+
+- For each genome file, removes sequences whose headers match the pattern
+
+- Saves the filtered genome to *_filtered.fa and logs removed headers to *_removed_chromosomes.log
+
+## ▶️ How to Run
+
+- Create a directory inside `/shared/el-scripts/`
+
+- Add your genome filenames to `genomev3.txt` (one per line)
+
+- Add unwanted chromosome names to `chromosomes_to_removev3.txt`
+
+- Make script executable: `chmod +x genome_cleaner.sh`
+
+- Run: `./genome_cleaner.sh`
+
+- Output FASTAs and logs are saved in their respective directories of those genomes
+
+## Step 1 : BuildDatabase and RepeatModeler
+
+Create genome-specific folders under the appropriate directory:
+
+- Use `/shared/input_genomes/paratus-bat/` for Paratus genomes
+
+- Use `/shared/input_genomes/bat1k-bat/` for Bat1K genomes
+
+**Download each genome FASTA file into a directory named after the genome filename (without the .fasta.gz extension). For example:**
+
+- `mHarHar1.hap1.cur.20250102.fasta.gz` → directory: `mHarHar1.hap1.cur.20250102`
+
+- `mHipRub1.HiC.hap1.20240409.fasta.gz` → directory: `mHipRub1.HiC.hap1.20240409`
+
+We keep all the input and outputs of all steps in this directory
+
+Refer **Step 0** for cleaning of downloaded genome fasta files 
+
+# 🔄 Automating BuildDatabase and RepeatModeler Job Submission for Multiple Genomes:
+
+To streamline the process of running BuildDatabase and RepeatModeler  for multiple genomes, we use a loop that:
+
+1. Reads genome names from a text file (genomelist1.txt)
+
+2. Replaces a placeholder xxxx in a job template file (template1.txt) with the actual genome name
+
+3. Submits the customised job file using sbatch
+
+## 📁 Required Input File: genomelist1.txt
+
+This file contains a list of genome names. If there's a header row, we skip it using `tail -n +2`
+
+Example contents:
+
+```
+genome_name
+mMyoTri1.hap1.decontam
+mNatMex1.HiC.hap1
+mNycThe2.HiC.hap1.decontam
+```
+Note: The genome names `genomelist1.txt` in  should match the directory names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
+
+## 📝 Job Template: template1.txt
+
+This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name.
+template script: 
+
+```
+#!/bin/bash
+#SBATCH --job-name=xxxx
+#SBATCH --output=/shared/slurm-out/xxxx_log_%j.txt
+#SBATCH --error=/shared/slurm-out/xxxx_error_%j.txt
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=72
+#SBATCH --constraint=c5.18xlarge
+#SBATCH --time=72:00:00
+#SBATCH --chdir=/shared/input_genomes/bat1k-bat/xxxx
+
+#mkdir -p /shared/slurm-out
+#chmod 777 /shared/slurm-out
+
+echo "Running on HPC"
+echo "Job started at: $(date)"
+echo "Running on: $(hostname)"
+echo "Working dir: $(pwd)"
+echo "Listing contents:"
+ls -lh
+
+echo "Starting RepeatModeler denovo Reapeat Library..."
+
+#gunzip xxxx.fa.gz
+input_fa="xxxx_filtered.fa"
+renamed_fa="xxxx_renamed.fa"
+db_name="xxxx"
+
+
+awk '/^>/ {header="scaffold" sprintf("%02d", ++i); $0=">" header; } 1' $input_fa > $renamed_fa
+
+/shared/masking_genomes/RepeatModeler/BuildDatabase -name $db_name $renamed_fa
+
+time /shared/masking_genomes/RepeatModeler/RepeatModeler -threads 72 -database $db_name -engine ncbi 
+
+echo "Job completed with exit code $?"
+```
+
+## 🚀 Script to Generate and Submit Jobs
+batch_generation.sh
+
+```
+#!/bin/bash
+
+# Read the header and skip it
+tail -n +2 genomelist1.txt | while IFS=, read genome; do
+    # Replace 'xxxx' in template1.txt with $genome
+    sed "s/xxxx/$genome/g" template1.txt > "${genome}_job.txt"
+    sbatch "${genome}_job.txt"
+done
+```
+
+## 🔍 Explanation
+
+- The `tail -n +2` skips the first line (header) in the genome list.
+
+- `while IFS=, read genome` reads each genome name, one at a time.
+
+- `sed "s/xxxx/$genome/g"` replaces every instance of xxxx in template1.txt with the actual genome name.
+
+- The output is saved to a new job file (e.g., `mMyoTri1_job.txt`).
+
+- `sbatch` is then used to submit that job file to the Slurm scheduler.
+
+## ▶️ How to Run:
+
+- Create a directory inside `/shared/el-scripts/` 
+
+- Add the following files to the directory:
+
+  - `genomelist1.txt` (containing 20–30 genomes)
+
+  - `template.sh`
+
+  - `batch_generation.sh`
+
+- Run the script using: `./batch_generation.sh`
+
+## 🧾 Example Output
+
+Before running `batch_generation.sh`
+![](classifier.png)
+
+After running `batch_generation.sh`
