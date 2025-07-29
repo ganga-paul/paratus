@@ -320,3 +320,5 @@ Before running `batch_generation.sh`
 
 After running `batch_generation.sh`
 ![](classifiergenerated.png)
+
+For genome `mMyoTri1`, this command creates:
