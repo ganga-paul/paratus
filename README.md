@@ -322,3 +322,252 @@ After running `batch_generation.sh`
 ![](classifiergenerated.png)
 
 For genome `mMyoTri1`, this command creates:
+
+- `mMyoTri1_job.txt` with:
+
+```
+#!/bin/bash
+#SBATCH --job-name=mMyoTri1.hap1.decontam
+#SBATCH --output=/shared/slurm-out/repeat_modeler_log_err/mMyoTri1.hap1.decontam_log_%j.txt
+#SBATCH --error=/shared/slurm-out/repeat_modeler_log_err/mMyoTri1.hap1.decontam_error_%j.txt
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=72
+#SBATCH --constraint=c5.18xlarge
+#SBATCH --time=72:00:00
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
+
+#mkdir -p /shared/slurm-out
+#chmod 777 /shared/slurm-out
+
+echo "Running on HPC"
+echo "Job started at: $(date)"
+echo "Running on: $(hostname)"
+echo "Working dir: $(pwd)"
+echo "Listing contents:"
+ls -lh
+
+echo "Starting RepeatModeler denovo Reapeat Library..."
+
+#gunzip mMyoTri1.hap1.decontam.fa.gz
+input_fa="mMyoTri1.hap1.decontam_filtered.fa"
+renamed_fa="mMyoTri1.hap1.decontam_renamed.fa"
+db_name="mMyoTri1.hap1.decontam"
+
+
+awk '/^>/ {header="scaffold" sprintf("%02d", ++i); $0=">" header; } 1' $input_fa > $renamed_fa
+
+/shared/masking_genomes/RepeatModeler/BuildDatabase -name $db_name $renamed_fa
+
+time /shared/masking_genomes/RepeatModeler/RepeatModeler -threads 72 -database $db_name -engine ncbi 
+
+echo "Job completed with exit code $?"
+
+```
+
+- `--output` log file:
+```
+#SBATCH --output=/shared/slurm-out/repeat_modeler_log_err/mMyoTri1.hap1.decontam_log_%j.txt
+```
+
+- `--error` error file (usually error file has all the logs):
+
+```
+#SBATCH --error=/shared/slurm-out/repeat_modeler_log_err/mMyoTri1.hap1.decontam_error_%j.txt
+```
+
+- `--chdir` Sets the working directory ($PWD) to the folder containing the filtered genome FASTA file for a specific genome
+```
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
+```
+
+`input_fa` sets the name of the pre-filtered genome FASTA file to be used
+
+`renamed_fa` will store a renamed version of the input
+
+`db_name` sets the name of the RepeatModeler database
+
+- **Rename FASTA Headers** : `awk` command is used to rename the FASTA headers in a file (specifically, the > lines), replacing each sequence header with a standardised name like `>scaffold01`, `>scaffold02`
+```
+awk '/^>/ {header="scaffold" sprintf("%02d", ++i); $0=">" header; } 1' $input_fa > $renamed_fa
+```
+
+- ***Build RepeatModeler Database***
+```
+/shared/masking_genomes/RepeatModeler/BuildDatabase -name $db_name $renamed_fa
+```
+  - Creates a BLAST database that RepeatModeler will use to search for repetitive elements.
+
+  - `-name "$db_name"`: Sets the base name of the database files.
+
+  - `"$renamed_fa"`: The input FASTA file.
+
+  - Output files will include: .nhr, .nin, .njs, .nnd, .nni, .nog, .nsq files
+
+- ***Run RepeatModeler***
+```
+time /shared/masking_genomes/RepeatModeler/RepeatModeler -threads 72 -database $db_name  -engine ncbi
+```
+  - `"$db_name"`: Uses the database you just built
+  - `-pa 72`: Parallel execution with 72 threads (make sure to match --cpus-per-task=72 in your SBATCH header)
+
+## ⏱️ Duration
+- Each genome job would take approximately 21hrs to complete
+
+# 🔍 Sanity Checks Overview
+
+Place the sanity check scripts in the corresponding directories based on the genome type:
+
+- For Paratus genomes, place the scripts in `/shared/input_genomes/paratus-bat/`
+
+- For Bat1K genomes, place the scripts in `/shared/input_genomes/bat1k-bat/`
+
+repeat_masker_v3.sh
+```
+#!/bin/bash
+
+# File suffixes to check
+suffixes=("fa.cat.gz" "fa.masked" "fa.out")
+
+# Report file
+report_file="masking_qc_report.tsv"
+echo -e "directory\tfa.cat.gz_found\tfa.masked_found\tfa.out_found\trenamed_fa_found\tsize_check_status\tsize_diff_bytes\tcase_check\tmasked_base_percent\tchromosome_check" > "$report_file"
+
+# Loop through all subdirectories
+for dir in */; do
+    cd "$dir" || continue
+    echo "📁 Processing $dir"
+
+    cat_found="No"
+    masked_found="No"
+    out_found="No"
+    renamed_found="No"
+    size_check="NA"
+    size_diff="NA"
+    case_check="NA"
+    masked_percent="NA"
+    chromosome_check="NA"
+
+    # Check for required files
+    for suffix in "${suffixes[@]}"; do
+        file=$(find . -maxdepth 1 -name "*.$suffix")
+        if [[ -z "$file" ]]; then
+            echo "❌ Missing file with suffix: .$suffix"
+        else
+            echo "✅ Found: $file"
+            [[ "$suffix" == "fa.cat.gz" ]] && cat_found="Yes"
+            [[ "$suffix" == "fa.masked" ]] && masked_found="Yes"
+            [[ "$suffix" == "fa.out" ]] && out_found="Yes"
+        fi
+    done
+
+    fa_masked=$(find . -maxdepth 1 -name "*.fa.masked" | head -n 1)
+    renamed_fa=$(find . -maxdepth 1 -name "*_renamed.fa" | head -n 1)
+
+    if [[ -n "$fa_masked" ]]; then masked_found="Yes"; fi
+    if [[ -n "$renamed_fa" ]]; then renamed_found="Yes"; fi
+
+    if [[ -n "$fa_masked" && -n "$renamed_fa" ]]; then
+        # File size comparison (with 10MB tolerance)
+        size_masked=$(stat -c%s "$fa_masked")
+        size_renamed=$(stat -c%s "$renamed_fa")
+        tolerance=$((10 * 1024 * 1024))
+        diff=$((size_masked - size_renamed))
+        diff=${diff#-}
+        size_diff=$diff
+
+        if [[ "$diff" -le "$tolerance" ]]; then
+            echo "✅ File sizes are approximately equal"
+            size_check="Pass"
+        else
+            echo "❌ File sizes differ too much"
+            size_check="Fail"
+        fi
+
+        # Check for both lowercase and uppercase characters
+        if grep -q '[a-z]' "$fa_masked" && grep -q '[A-Z]' "$fa_masked"; then
+            echo "✅ $fa_masked contains both lowercase and uppercase bases"
+            case_check="Yes"
+        else
+            echo "❌ $fa_masked does NOT contain both lowercase and uppercase bases"
+            case_check="No"
+        fi
+
+        # Calculate masked base percentage
+        masked_percent=$(awk '
+        /^>/ { next }
+        {
+            total += length($0)
+            masked += gsub(/[nN]/, "")
+            masked += gsub(/[atcgn]/, "")
+        }
+        END {
+            if (total > 0) {
+                printf "%.2f", (masked / total) * 100
+            } else {
+                print "NA"
+            }
+        }' "$fa_masked")
+        echo "📊 Masked base percentage: $masked_percent%"
+
+        # Compare chromosome headers
+        renamed_headers=$(grep "^>" "$renamed_fa" | sed 's/^>//' | cut -d' ' -f1 | sort -u)
+        masked_headers=$(grep "^>" "$fa_masked" | sed 's/^>//' | cut -d' ' -f1 | sort -u)
+
+        missing_chroms=()
+        while read -r chrom; do
+            if ! grep -q "^$chrom$" <<< "$masked_headers"; then
+                missing_chroms+=("$chrom")
+            fi
+        done <<< "$renamed_headers"
+
+        if [[ ${#missing_chroms[@]} -eq 0 ]]; then
+            chromosome_check="All_present"
+        else
+            chromosome_check=$(IFS=,; echo "Missing:${missing_chroms[*]}")
+        fi
+        echo "🔍 Chromosome check: $chromosome_check"
+    fi
+
+    # Write to report
+    echo -e "${dir%/}\t$cat_found\t$masked_found\t$out_found\t$renamed_found\t$size_check\t$size_diff\t$case_check\t$masked_percent\t$chromosome_check" >> "../$report_file"
+
+    cd ..
+done
+
+echo "✅ QC report written to: $report_file"
+```
+
+## ✅ What It Does:
+
+- Iterates through each genome folder within a given parent directory
+
+- Checks for the presence of the following files in each genome directory:
+
+  - *.fa.cat.gz
+
+  - *.fa.masked
+
+  - *.fa.out
+
+- Verifies that the size difference between the original and masked FASTA files is within 10 MB
+
+- Confirms that the masked FASTA file contains both uppercase and lowercase characters
+
+- Calculates the percentage of bases that are masked
+
+- Compares headers of the original and masked FASTA files to identify any missing chromosomes
+
+- Records all check results and summaries into a .tsv report
+
+## 🧾 Output .tsv File:
+
+The script creates a tab-separated summary file with the following columns:
+
+
+| directory                | fa.cat.gz_found | fa.masked_found | fa.out_found | renamed_fa_found | size_check_status | size_diff_bytes | case_check | masked_base_percent | chromosome_check |
+|----------------------------|-----------------|-----------------|--------------|------------------|-------------------|-----------------|------------|----------------------|------------------|
+| mCynHor1.hap1.cur.20250324 | Yes             | Yes             | Yes          | Yes              | Pass              | 5872971         | Yes        | 25.31               | All_present      |
+
+
+  
