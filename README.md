@@ -316,6 +316,7 @@ done
 ## 🧾 Example Output
 
 Before running `batch_generation.sh`
-![](classifier.png)
+![](classifier_scripts.png)
 
 After running `batch_generation.sh`
+![](classifiergenerated.png)
