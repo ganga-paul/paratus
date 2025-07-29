@@ -86,7 +86,9 @@ Once screened the output (chromname_checking_0305.txt here) is manually checked 
 - **Reads chromosome names** from a text file:  
   `chromosomes_to_removev3.txt`
 
-- **Reads genome names** (absolute file paths of FASTA files) from:  
+- **Reads genome names** absolute file paths of FASTA files from:  
   `genomev3.txt`
 
-- **Removes the specifi
+- **Removes the chromosomes from genomes** using the custom script `genome_cleaner.sh`
+
+- 
