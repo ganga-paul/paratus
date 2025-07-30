@@ -233,6 +233,7 @@ Place the sanity check scripts in the corresponding directories based on the gen
 
 - For Bat1K genomes, place the scripts in `/shared/input_genomes/bat1k-bat/`
 
+
 ### 🧪 BuildDatabase Sanity Checks
 build_db_check.sh
 ```
@@ -293,6 +294,7 @@ The script creates a tab-separated summary file with the following columns:
 From within the parent genome directory(/shared/input_genomes/paratus-bat/ or /shared/input_genomes/bat1k-bat/ ) :
 `./build_db_check.sh`
  
+
 
 ### 🧪 RepeatModeler Sanity Checks
 repeat_modeler_check_v4.sh
