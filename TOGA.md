@@ -20,8 +20,8 @@ mNycThe2.HiC.hap1.decontam
 ```
 Note: The genome names `genomelist1.txt` in  should match the folder names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
 
-## 📝 Job Template: `template1.txt`
-This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name.
+## 📝 Job Template: `template1.txt` 
+This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name. Replace '/shared/input_genomes/paratus-bat/' with `/shared/input_genomes/bat1k-bat/` when processing Bat1K genomes.
 
 template script: 
 ```
@@ -102,7 +102,7 @@ The output is saved to a new job file (e.g., `mMyoTri1_job.txt`).
 
 - Keep 3-4 genomes in `genomelist1.txt`
 
-- keep `genomelist1.txt`, `template.sh`,`batch_generation.sh` in this folder
+- keep `genomelist1.txt`, `template.sh` (Replace '/shared/input_genomes/paratus-bat/' with `/shared/input_genomes/bat1k-bat/` when processing Bat1K genomes) ,`batch_generation.sh` in this folder
 
 - run `./batch_generation.sh`
 
