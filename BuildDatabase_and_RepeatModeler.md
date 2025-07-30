@@ -20,13 +20,13 @@ Refer **Step 0** for cleaning of downloaded genome fasta files
 
 To streamline the process of running BuildDatabase and RepeatModeler  for multiple genomes, we use a loop that:
 
-1. Reads genome names from a text file (genomelist1.txt)
+1. Reads genome names from a text file (`genomelist1.txt`)
 
-2. Replaces a placeholder xxxx in a job template file (template1.txt) with the actual genome name
+2. Replaces a placeholder xxxx in a job template file (`template1.txt`) with the actual genome name
 
-3. Submits the customised job file using sbatch
+3. Submits the customised job file using `sbatch`
 
-## 📁 Required Input File: genomelist1.txt
+## 📁 Required Input File: `genomelist1.txt`
 
 This file contains a list of genome names. If there's a header row, we skip it using `tail -n +2`
 
@@ -40,7 +40,7 @@ mNycThe2.HiC.hap1.decontam
 ```
 Note: The genome names `genomelist1.txt` in  should match the directory names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
 
-## 📝 Job Template: template1.txt
+## 📝 Job Template: `template1.txt`
 
 This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name.
 template script: 
