@@ -23,7 +23,7 @@ mNycThe2.HiC.hap1.decontam
 Note: The genome names `genomelist1.txt` in  should match the folder names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
 
 ## 📝 Job Template: `template1.txt`
-This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name. Replace `/shared/input_genomes/paratus-bat/` with `/shared/input_genomes/bat1k-bat/` when processing Bat1K genomes
+This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name. Replace `/shared/input_genomes/paratus-bat/` in `--chdir` with `/shared/input_genomes/bat1k-bat/` when processing Bat1K genomes
 
 template script:
 ```
@@ -93,7 +93,7 @@ done
 
 - Keep 20-25 genomes in `genomelist1.txt`
 
-- keep following files in this directory : `genomelist1.txt`, `template.sh` (Replace `/shared/input_genomes/paratus-bat/` with `/shared/input_genomes/bat1k-bat/` when processing Bat1K genomes), `batch_generation.sh`
+- keep following files in this directory : `genomelist1.txt`, `template.sh` (Replace `/shared/input_genomes/paratus-bat/` in `--chdir` with `/shared/input_genomes/bat1k-bat/` when processing Bat1K genomes), `batch_generation.sh`
 
 - run `./batch_generation.sh`
 
