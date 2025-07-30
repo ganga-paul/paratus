@@ -3,11 +3,11 @@
 ## 🔄 Automating RepeatMasker Job Submission for Multiple Genomes
 To streamline the process of running RepeatMasker for multiple genomes, we use a loop that:
 
-Reads genome names from a text file (`genomelist1.txt`)
+1.Reads genome names from a text file (`genomelist1.txt`)
 
-Replaces a placeholder xxxx in a job template file (`template1.txt`) with the actual genome name
+2.Replaces a placeholder xxxx in a job template file (`template1.txt`) with the actual genome name
 
-Submits the customised job file using `sbatch`
+3.Submits the customised job file using `sbatch`
 
 ## 📁 Required Input File: `genomelist1.txt`
 This file contains a list of genome names. If there's a header row, we skip it using tail -n +2.
