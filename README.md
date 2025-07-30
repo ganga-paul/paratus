@@ -414,6 +414,635 @@ time /shared/masking_genomes/RepeatModeler/RepeatModeler -threads 72 -database $
 ## ⏱️ Duration
 - Each genome job would take approximately 21hrs to complete
 
+## 🔍 Sanity Checks Overview
+Place the sanity check scripts in the corresponding directories based on the genome type:
+
+- For Paratus genomes, place the scripts in `/shared/input_genomes/paratus-bat/`
+
+- For Bat1K genomes, place the scripts in `/shared/input_genomes/bat1k-bat/`
+
+## 🧪 BuildDatabase Sanity Checks
+build_db_check.sh
+```
+#!/bin/bash
+# List of required suffixes
+required_suffixes=(.nhr .nin .njs .nnd .nni .nog .nsq)
+# Output report file
+report_file="build_database_check_report.tsv"
+echo -e "genome_dir\tmissing_suffixes" > "$report_file"
+# Loop through all top-level subdirectories
+for genome_dir in */; do
+    genome_name=$(basename "$genome_dir")
+    echo "🔍 Checking $genome_name"
+    missing=()
+    for suffix in "${required_suffixes[@]}"; do
+        # Check if any file with the given suffix exists in the current top-level dir
+        if ! compgen -G "${genome_dir}*${suffix}" > /dev/null; then
+            missing+=("$suffix")
+        fi
+    done
+    if [ ${#missing[@]} -eq 0 ]; then
+        echo "✅ All required Build-Database output files found in $genome_name"
+        missing_summary="None"
+    else
+        echo "❌ Missing these Build-Database output files from $genome_name: ${missing[*]}"
+        missing_summary=$(IFS=,; echo "${missing[*]}")
+    fi
+    echo -e "${genome_name}\t${missing_summary}" >> "$report_file"
+    echo ""
+done
+echo "✅ Report written to: $report_file"
+```
+
+## ✅ What It Does:
+- Iterates over each genome folder inside a specified directory.
+
+- Checks for the presence of required output files based on their suffixes (e.g., .nhr, .nin, .nsq)
+
+- Captures the list of missing files 
+
+- Compiles the check results into a .tsv file.
+
+## 🧾 Output .tsv File:
+The script creates a tab-separated summary file with the following columns:
+
+<div style="overflow-x: auto;">
+
+| genome_dir                | missing_files                |
+|---------------------------|-----------------------------|
+| mAetAle1.hap1.cur.20250328| .nhr, .nin, .njs, .nnd, .nni, .nog, .nsq |
+| mAntDub1_hap1.cur.20250116| None                        |
+
+</div>
+
+- Sanity_check_pass column was added manually after inspecting each row
+
+## ▶️ How to Run:
+From within the parent genome directory(/shared/input_genomes/paratus-bat/ or /shared/input_genomes/bat1k-bat/ ) :
+`./build_db_check.sh`
+ 
+
+## 🧪 RepeatModeler Sanity Checks
+repeat_modeler_check_v4.sh
+```
+#!/bin/bash
+# Root directory containing genome folders
+genomes_root="/shared/input_genomes/paratus-bat"  # ← CHANGE THIS
+report_file="repeatmodeler_report.tsv"
+# Required output files from RepeatModeler
+required_rmod_files=("consensi.fa" "families.stk" "rmod.log")
+# Write header to report file
+echo -e "genome_name\tRepeatModeler_output_found\tconsensi.fa_found\tconsensi.fa_size_kb\tfamilies.stk_found\trmod.log_found\tmissing_files\tchromosomes_in_stk" > "$report_file"
+echo "🔎 Scanning RepeatModeler outputs under: $genomes_root"
+echo "======================================================="
+# Loop through each genome directory
+for genome_dir in "$genomes_root"/*/; do
+    genome_name=$(basename "$genome_dir")
+    rmod_dir="${genome_dir}/RepeatModeler_output"
+    missing=()
+    output_found="Yes"
+    consensi_found="No"
+    stk_found="No"
+    log_found="No"
+    consensi_size="NA"
+    chromosome_check="NA"
+    echo "📂 Checking genome: $genome_name"
+    # Check if RepeatModeler_output exists
+    if [[ ! -d "$rmod_dir" ]]; then
+        echo "❌ Missing RepeatModeler_output directory in $genome_name"
+        output_found="No"
+        echo -e "${genome_name}\t${output_found}\t${consensi_found}\t${consensi_size}\t${stk_found}\t${log_found}\tRepeatModeler_output_missing\t${chromosome_check}" >> "$report_file"
+        echo ""
+        continue
+    fi
+    echo "✅ Found RepeatModeler_output directory"
+    # Check individual required files
+    for file in "${required_rmod_files[@]}"; do
+        path="$rmod_dir/$file"
+        if [[ ! -f "$path" ]]; then
+            missing+=("$file")
+        else
+            case "$file" in
+                "consensi.fa")
+                    consensi_found="Yes"
+                    size_kb=$(du -k "$path" | cut -f1)
+                    consensi_size="$size_kb"
+                    if (( size_kb < 500 || size_kb > 1200 )); then
+                        echo "⚠️ consensi.fa size is outside expected range (500–1200 KB): ${size_kb} KB"
+                    else
+                        echo "📏 consensi.fa size OK: ${size_kb} KB"
+                    fi
+                    ;;
+                "families.stk")
+                    stk_found="Yes"
+                    ;;
+                "rmod.log")
+                    log_found="Yes"
+                    ;;
+            esac
+        fi
+    done
+    # Compare genome_renamed.fa chromosomes vs families.stk entries
+    renamed_fa="${genome_dir}/${genome_name}_renamed.fa"
+    if [[ -f "$renamed_fa" && -f "$rmod_dir/families.stk" ]]; then
+        # Extract chromosomes from the renamed.fa file
+        chromosomes=$(grep "^>" "$renamed_fa" | sed 's/^>//' | cut -d' ' -f1 | sort)
+        # Extract headers from families.stk without ">"
+        stk_headers=$(grep -v "^#" "$rmod_dir/families.stk" |  cut -d':' -f1 | sort -u)
+        missing_chroms=()
+        while read -r chrom; do
+            if ! grep -q "^$chrom$" <<< "$stk_headers"; then
+                missing_chroms+=("$chrom")
+            fi
+        done <<< "$chromosomes"
+        if [[ ${#missing_chroms[@]} -eq 0 ]]; then
+            chromosome_check="All_present"
+        else
+            chromosome_check=$(IFS=,; echo "Missing:${missing_chroms[*]}")
+        fi
+    fi
+    # Log status
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        echo "✅ All required RepeatModeler files found."
+        missing_summary="None"
+    else
+        echo "❌ Missing files:"
+        missing_summary=$(IFS=,; echo "${missing[*]}")
+        for f in "${missing[@]}"; do
+            echo "   - $f"
+        done
+    fi
+    # Write TSV line
+    echo -e "${genome_name}\t${output_found}\t${consensi_found}\t${consensi_size}\t${stk_found}\t${log_found}\t${missing_summary}\t${chromosome_check}" >> "$report_file"
+    echo ""
+done
+echo "✅ Summary report written to: $report_file"
+```
+
+## ✅ What It Does:
+- Iterates through each genome directory under a given parent folder.
+
+- For each genome, checks if the RepeatModeler_output directory exists.
+
+- If present, verifies the existence of the following files inside it:
+
+  - consensi.fa
+
+  - families.stk
+
+  - rmod.log
+
+- Validates consensi.fa file size to ensure it falls within 500–1200 KB.
+
+- Extracts chromosome names from the input FASTA file and sequence headers from families.stk, then compares them to confirm all chromosomes are represented in families.stk.
+
+- Records missing files, size issues, and chromosome mismatches in a .tsv summary report.
+
+## 🧾 Output .tsv File:
+The script creates a tab-separated summary file with the following columns:
+<div style="overflow-x: auto;">
+
+| genome_name               | Sanity_check_pass | RepeatModeler_output_found | consensi.fa_found | consensi.fa_size_kb | families.stk_found | rmod.log_found | missing_files | missing_chromosomes_in_stk              |
+|---------------------------|-------------------|----------------------------|-------------------|---------------------|--------------------|----------------|---------------|-----------------------------------------|
+| mAetAle1.hap1.cur.20250328| Yes               | Yes                        | Yes               | 992                 | Yes                | Yes            | None          | Missing: scaffold24, scaffold28         |
+| mAntDub1_hap1.cur.20250116| Yes               | Yes                        | Yes               | 924                 | Yes                | Yes            | None          | Missing: scaffold1000, scaffold1001     |
+</div>
+
+Sanity_check_pass column was added manually after inspecting each row checks
+
+🔁 Workflow Overview for BuildDatabase and RepeatModeler
+
+![](repeatmodeler.png)
+ 
+
+## Step 2 : RepeatClassifier
+
+## 🔄 Automating RepeatClassifier Job Submission for Multiple Genomes
+To streamline the process of running BuildDatabase and RepeatModeler  for multiple genomes, we use a loop that:
+
+Reads genome names from a text file (`genomelist1.txt`)
+
+Replaces a placeholder xxxx in a job template file (`template1.txt`) with the actual genome name
+
+Submits the customised job file using sbatch
+
+## 📁 Required Input File: `genomelist1.txt`
+This file contains a list of genome names. If there's a header row, we skip it using tail -n +2.
+
+Example contents:
+```
+genome_name
+mMyoTri1.hap1.decontam
+mNatMex1.HiC.hap1
+mNycThe2.HiC.hap1.decontam
+``
+
+Note: The genome names `genomelist1.txt` in  should match the folder names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
+
+## 📝 Job Template: `template1.txt`
+This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name.
+
+template script:
+```
+#!/bin/bash
+#SBATCH --job-name=xxxx-classifier
+#SBATCH --output=/shared/slurm-out/repeat_classifier_log_err/xxxx-classifier-output_job_%j.txt
+#SBATCH --error=/shared/slurm-out/repeat_classifier_log_err/xxxx-classifier-error_job_%j.txt
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=48
+#SBATCH --constraint=c5.12xlarge
+#SBATCH --time=10:00:00
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/xxxx
+#mkdir -p /shared/slurm-out
+#chmod 777 /shared/slurm-out
+echo "Running on HPC"
+echo "Job started at: $(date)"
+echo "Running on: $(hostname)"
+echo "Working dir: $(pwd)"
+echo "Listing contents:"
+ls -lh
+echo "Starting RepeatModeler Classifier..."
+# Prevent conda from using user-specific config paths
+export CONDA_PKGS_DIRS=/tmp/conda_pkgs_$SLURM_JOB_ID
+export CONDA_ENVS_PATH=/tmp/conda_envs_$SLURM_JOB_ID
+export HOME=/tmp  # temporary HOME to avoid ~/.condarc issue
+export CONDA_NO_PLUGINS=true  # optional, if plugins are breaking it
+source /shared/tools/miniconda3/etc/profile.d/conda.sh
+conda activate prepare_genomes
+# Get the input path
+parent_dir="$(pwd)"
+# Find first subdirectory (customize `head -n 1` or pattern as needed)
+subdir=$(find "$parent_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+# Define new name (customize if needed)
+new_name="${parent_dir}/RepeatModeler_output"
+mv "$subdir" "$new_name"
+cd "${new_name}"
+time /shared/masking_genomes/RepeatModeler/RepeatClassifier -consensi "${new_name}/consensi.fa" -stockholm "${new_name}/families.stk"
+echo "Job completed with exit code $?"
+``` 
+
+## 🚀 Script to Generate and Submit Jobs
+batch_generation.sh
+```
+#!/bin/bash
+# Read the header and skip it
+tail -n +2 genomelist1.txt | while IFS=, read genome; do
+    # Replace 'xxxx' in template1.txt with $genome
+    sed "s/xxxx/$genome/g" template1.txt > "${genome}_job.txt"
+    sbatch "${genome}_job.txt"
+done
+```
+
+## 🔍 Explanation
+The tail -n +2 skips the first line (header) in the genome list.
+
+while IFS=, read genome reads each genome name, one at a time.
+
+sed "s/xxxx/$genome/g" replaces every instance of xxxx in template1.txt with the actual genome name.
+
+The output is saved to a new job file (e.g., mMyoTri1_job.txt).
+
+sbatch is then used to submit that job file to the Slurm scheduler.
+
+▶️ How to Run:
+make batch generation folder like batch_0503_classifier inside /shared/el-scripts/
+
+Keep 20-25 genomes in genomelist1.txt
+
+keep genomelist1.txt, template.sh,batch_generation.sh in this folder
+
+run ./batch_generation.sh
+
+🧾 Example Output
+Before running batch_generation.sh
+
+
+After running batch_generation.sh
+
+
+For genome mMyoTri1, this command creates:
+
+
+
+#!/bin/bash
+#SBATCH --job-name=mMyoTri1.hap1.decontam-classifier
+#SBATCH --output=/shared/slurm-out/repeat_classifier_log_err/mMyoTri1.hap1.decontam-classifier-output_job_%j.txt
+#SBATCH --error=/shared/slurm-out/repeat_classifier_log_err/mMyoTri1.hap1.decontam-classifier-error_job_%j.txt
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=48
+#SBATCH --constraint=c5.12xlarge
+#SBATCH --time=10:00:00
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
+#mkdir -p /shared/slurm-out
+#chmod 777 /shared/slurm-out
+echo "Running on HPC"
+echo "Job started at: $(date)"
+echo "Running on: $(hostname)"
+echo "Working dir: $(pwd)"
+echo "Listing contents:"
+ls -lh
+echo "Starting RepeatModeler Classifier..."
+# Prevent conda from using user-specific config paths
+export CONDA_PKGS_DIRS=/tmp/conda_pkgs_$SLURM_JOB_ID
+export CONDA_ENVS_PATH=/tmp/conda_envs_$SLURM_JOB_ID
+export HOME=/tmp  # temporary HOME to avoid ~/.condarc issue
+export CONDA_NO_PLUGINS=true  # optional, if plugins are breaking it
+source /shared/tools/miniconda3/etc/profile.d/conda.sh
+conda activate prepare_genomes
+# Get the input path
+parent_dir="$(pwd)"
+# Find first subdirectory (customize `head -n 1` or pattern as needed)
+subdir=$(find "$parent_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+# Define new name (customize if needed)
+new_name="${parent_dir}/RepeatModeler_output"
+mv "$subdir" "$new_name"
+cd "${new_name}"
+time /shared/masking_genomes/RepeatModeler/RepeatClassifier -consensi "${new_name}/consensi.fa" -stockholm "${new_name}/families.stk"
+echo "Job completed with exit code $?"
+--output log file:
+
+
+
+#SBATCH --output=/shared/slurm-out/repeat_classifier_log_err/mMyoTri1.hap1.decontam-classifier-output_job_%j.txt
+--error error file (usually error file has all the logs):
+
+
+
+#SBATCH --error=/shared/slurm-out/repeat_classifier_log_err/mMyoTri1.hap1.decontam-classifier-error_job_%j.txt
+--chdir Sets the working directory ($PWD) to the folder containing the filtered genome FASTA file for a specific genome
+
+
+
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
+Activate conda env
+
+
+
+source /shared/tools/miniconda3/etc/profile.d/conda.sh
+conda activate prepare_genomes
+Find subdir that was generated by the RepeatModeler tool and rename
+
+
+
+subdir=$(find "$parent_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+mv "$subdir" "$new_name"
+cd "${new_name}"
+RepeatClassifier command
+
+
+
+time /shared/masking_genomes/RepeatModeler/RepeatClassifier -consensi "${new_name}/consensi.fa" -stockholm "${new_name}/families.stk"
+-consensi: path for consensi file
+
+-stockholm : path for stk file
+
+⏱️ Duration
+Each genome job would take approximately 10minutes to complete
+
+🔍 Sanity Checks Overview
+Place the sanity check scripts in the corresponding directories based on the genome type:
+
+For Paratus genomes, place the scripts in /shared/input_genomes/paratus-bat/
+
+For Bat1K genomes, place the scripts in /shared/input_genomes/bat1k-bat/
+
+🧪 RepeatClassifier Sanity Checks
+repeat_classifier_check.sh
+
+
+
+#!/bin/bash
+# Output report file
+report_file="consensi_classified_check_report.tsv"
+echo -e "genome_dir\tclassified_file_present" > "$report_file"
+# Loop through all top-level subdirectories
+for genome_dir in */; do
+    genome_name=$(basename "$genome_dir")
+    rm_output_dir="${genome_dir}/RepeatModeler_output"
+    target_file="${rm_output_dir}/consensi.fa.classified"
+    echo "🔍 Checking $genome_name"
+    if [[ -f "$target_file" ]]; then
+        echo "✅ $target_file is present."
+        status="present"
+    else
+        echo "❌ $target_file is missing."
+        status="missing"
+    fi
+    echo -e "${genome_name}\t${status}" >> "$report_file"
+    echo ""
+done
+echo "✅ Report written to: $report_file"
+✅ What It Does:
+Iterates through each genome folder under a specified parent directory.
+
+Checks if consensi.fa.classified is present in RepeatModeler_output subdir
+
+Compiles the check results into a .tsv file.
+
+🧾 Output .tsv File:
+The script creates a tab-separated summary file with the following columns:
+
+genome_dir
+
+classified_file_present
+
+mAetAle1.hap1.cur.20250328
+
+present
+
+Sanity_check_pass column was added manually after inspecting each row checks
+
+🔁 Workflow Overview for RepeatClassifier
+
+Untitled presentation (3).png
+ 
+
+Step 3 : RepeatMasker
+🔄 Automating RepeatMasker Job Submission for Multiple Genomes
+To streamline the process of running BuildDatabase and RepeatModeler  for multiple genomes, we use a loop that:
+
+Reads genome names from a text file (genomelist1.txt)
+
+Replaces a placeholder xxxx in a job template file (template1.txt) with the actual genome name
+
+Submits the customised job file using sbatch
+
+📁 Required Input File: genomelist1.txt
+This file contains a list of genome names. If there's a header row, we skip it using tail -n +2.
+
+Example contents:
+
+
+
+genome_name
+mMyoTri1.hap1.decontam
+mNatMex1.HiC.hap1
+mNycThe2.HiC.hap1.decontam
+Note: The genome names genomelist1.txt in  should match the directory names in /shared/input_genomes/paratus-bat/ and /shared/input_genomes/bat1k-bat/ for Paratus and Bat1k respectively
+
+📝 Job Template: template1.txt
+This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name.
+
+template script:
+
+
+
+#!/bin/bash
+#SBATCH --job-name=xxxx_masker
+#SBATCH --output=/shared/slurm-out/repeat_masker_log_err/xxxx-masker-output_job_%j.txt
+#SBATCH --error=/shared/slurm-out/repeat_masker_log_err/xxxx-masker-error_job_%j.txt
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=48
+#SBATCH --constraint=c5.12xlarge
+#SBATCH --time=50:00:00
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/xxxx
+#mkdir -p /shared/slurm-out
+#chmod 777 /shared/slurm-out
+echo "Running on HPC"
+echo "Job started at: $(date)"
+echo "Running on: $(hostname)"
+echo "Working dir: $(pwd)"
+echo "Listing contents:"
+ls -lh
+echo "Starting RepeatModeler Masker..."
+# Prevent conda from using user-specific config paths
+export CONDA_PKGS_DIRS=/tmp/conda_pkgs_$SLURM_JOB_ID
+export CONDA_ENVS_PATH=/tmp/conda_envs_$SLURM_JOB_ID
+export HOME=/tmp # temporary HOME to avoid ~/.condarc issue
+export CONDA_NO_PLUGINS=true # optional, if plugins are breaking it
+source /shared/tools/miniconda3/etc/profile.d/conda.sh
+conda activate prepare_genomes
+# Get the input path
+parent_dir="$(pwd)"
+# Define new name (customize if needed)
+new_name_rmodler="${parent_dir}/RepeatModeler_output"
+new_name="${parent_dir}/RepeatMasker_output"
+mkdir "${new_name}"
+cd "${new_name}"
+time /shared/masking_genomes/RepeatMasker/RepeatMasker -pa 48 -xsmall -s -lib "${new_name_rmodler}/consensi.fa.classified" "${parent_dir}/xxxx_renamed.fa"
+echo "Job completed with exit code $?"
+ 
+
+🚀 Script to Generate and Submit Jobs
+batch_generation.sh
+
+
+
+#!/bin/bash
+# Read the header and skip it
+tail -n +2 genomelist1.txt | while IFS=, read genome; do
+    # Replace 'xxxx' in template1.txt with $genome
+    sed "s/xxxx/$genome/g" template1.txt > "${genome}_job.txt"
+    sbatch "${genome}_job.txt"
+done
+ 
+
+🔍 Explanation
+The tail -n +2 skips the first line (header) in the genome list.
+
+while IFS=, read genome reads each genome name, one at a time.
+
+sed "s/xxxx/$genome/g" replaces every instance of xxxx in template1.txt with the actual genome name.
+
+The output is saved to a new job file (e.g., mMyoTri1_job.txt).
+
+sbatch is then used to submit that job file to the Slurm scheduler.
+
+▶️ How to Run:
+make batch generation folder like batch_0503_masker inside /shared/el-scripts/
+
+Keep 15-20 genomes in genomelist1.txt
+
+keep genomelist1.txt, template.sh,batch_generation.sh in this folder
+
+run ./batch_generation.sh
+
+🧾 Example Output
+Before running batch_generation.sh
+
+
+After running batch_generation.sh
+
+
+For genome mMyoTri1, this command creates:
+
+
+
+#!/bin/bash
+#SBATCH --job-name=mMyoTri1.hap1.decontam_masker
+#SBATCH --output=/shared/slurm-out/repeat_masker_log_err/mMyoTri1.hap1.decontam-masker-output_job_%j.txt
+#SBATCH --error=/shared/slurm-out/repeat_masker_log_err/mMyoTri1.hap1.decontam-masker-error_job_%j.txt
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=48
+#SBATCH --constraint=c5.12xlarge
+#SBATCH --time=50:00:00
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
+#mkdir -p /shared/slurm-out
+#chmod 777 /shared/slurm-out
+echo "Running on HPC"
+echo "Job started at: $(date)"
+echo "Running on: $(hostname)"
+echo "Working dir: $(pwd)"
+echo "Listing contents:"
+ls -lh
+echo "Starting RepeatModeler Masker..."
+# Prevent conda from using user-specific config paths
+export CONDA_PKGS_DIRS=/tmp/conda_pkgs_$SLURM_JOB_ID
+export CONDA_ENVS_PATH=/tmp/conda_envs_$SLURM_JOB_ID
+export HOME=/tmp # temporary HOME to avoid ~/.condarc issue
+export CONDA_NO_PLUGINS=true # optional, if plugins are breaking it
+source /shared/tools/miniconda3/etc/profile.d/conda.sh
+conda activate prepare_genomes
+# Get the input path
+parent_dir="$(pwd)"
+# Define new name (customize if needed)
+new_name_rmodler="${parent_dir}/RepeatModeler_output"
+new_name="${parent_dir}/RepeatMasker_output"
+mkdir "${new_name}"
+cd "${new_name}"
+time /shared/masking_genomes/RepeatMasker/RepeatMasker -pa 48 -xsmall -s -lib "${new_name_rmodler}/consensi.fa.classified" "${parent_dir}/mMyoTri1.hap1.decontam_renamed.fa"
+echo "Job completed with exit code $?"
+--output log file:
+
+
+
+#SBATCH --output=/shared/slurm-out/repeat_masker_log_err/mMyoTri1.hap1.decontam-masker-output_job_%j.txt
+--error error file (usually error file has all the logs):
+
+
+
+#SBATCH --error=/shared/slurm-out/repeat_masker_log_err/mMyoTri1.hap1.decontam-masker-error_job_%j.txt
+   --chdir Sets the working directory ($PWD) to the folder containing the filtered genome FASTA file for a specific genome
+
+Define output folder for RepeatMasker output new_name_rmodler="${parent_dir}/RepeatModeler_output"
+
+
+
+#SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
+Activate conda env
+
+
+
+source /shared/tools/miniconda3/etc/profile.d/conda.sh
+conda activate prepare_genomes
+Run RepeatMasker
+
+
+
+time /shared/masking_genomes/RepeatMasker/RepeatMasker -pa 48 -xsmall -s -lib "${new_name_rmodler}/consensi.fa.classified" "${parent_dir}/mMyoTri1.hap1.decontam_renamed.fa"
+-pa : Parallel execution with 48 threads (make sure to match --cpus-per-task=48 in your SBATCH header)
+
+-lib:classified file path
+
+${parent_dir}/mMyoTri1.hap1.decontam_renamed.fa : fasta filepath
+
+⏱️ Duration
+Each genome job would take approximately 4hrs to complete
+
 # 🔍 Sanity Checks Overview
 
 Place the sanity check scripts in the corresponding directories based on the genome type:
