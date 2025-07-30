@@ -1,4 +1,4 @@
-## Step 1 : BuildDatabase and RepeatModeler
+# Step 1 : BuildDatabase and RepeatModeler
 
 Create genome-specific folders under the appropriate directory:
 
@@ -16,7 +16,7 @@ We keep all the input and outputs of all steps in this directory
 
 Refer **Step 0** for cleaning of downloaded genome fasta files 
 
-# 🔄 Automating BuildDatabase and RepeatModeler Job Submission for Multiple Genomes:
+## 🔄 Automating BuildDatabase and RepeatModeler Job Submission for Multiple Genomes:
 
 To streamline the process of running BuildDatabase and RepeatModeler  for multiple genomes, we use a loop that:
 
@@ -232,7 +232,7 @@ Place the sanity check scripts in the corresponding directories based on the gen
 
 - For Bat1K genomes, place the scripts in `/shared/input_genomes/bat1k-bat/`
 
-## 🧪 BuildDatabase Sanity Checks
+### 🧪 BuildDatabase Sanity Checks
 build_db_check.sh
 ```
 #!/bin/bash
@@ -265,7 +265,7 @@ done
 echo "✅ Report written to: $report_file"
 ```
 
-## ✅ What It Does:
+### ✅ What It Does:
 - Iterates over each genome folder inside a specified directory.
 
 - Checks for the presence of required output files based on their suffixes (e.g., .nhr, .nin, .nsq)
@@ -274,7 +274,7 @@ echo "✅ Report written to: $report_file"
 
 - Compiles the check results into a .tsv file.
 
-## 🧾 Output .tsv File:
+### 🧾 Output .tsv File:
 The script creates a tab-separated summary file with the following columns:
 
 <div style="overflow-x: auto;">
@@ -288,12 +288,12 @@ The script creates a tab-separated summary file with the following columns:
 
 - Sanity_check_pass column was added manually after inspecting each row
 
-## ▶️ How to Run:
+### ▶️ How to Run:
 From within the parent genome directory(/shared/input_genomes/paratus-bat/ or /shared/input_genomes/bat1k-bat/ ) :
 `./build_db_check.sh`
  
 
-## 🧪 RepeatModeler Sanity Checks
+### 🧪 RepeatModeler Sanity Checks
 repeat_modeler_check_v4.sh
 ```
 #!/bin/bash
@@ -390,7 +390,7 @@ done
 echo "✅ Summary report written to: $report_file"
 ```
 
-## ✅ What It Does:
+### ✅ What It Does:
 - Iterates through each genome directory under a given parent folder.
 
 - For each genome, checks if the RepeatModeler_output directory exists.
@@ -409,7 +409,7 @@ echo "✅ Summary report written to: $report_file"
 
 - Records missing files, size issues, and chromosome mismatches in a .tsv summary report.
 
-## 🧾 Output .tsv File:
+### 🧾 Output .tsv File:
 The script creates a tab-separated summary file with the following columns:
 <div style="overflow-x: auto;">
 
@@ -421,7 +421,7 @@ The script creates a tab-separated summary file with the following columns:
 
 Sanity_check_pass column was added manually after inspecting each row checks
 
-🔁 Workflow Overview for BuildDatabase and RepeatModeler
+### 🔁 Workflow Overview for BuildDatabase and RepeatModeler
 
 ![](repeatmodeler.png)
  
