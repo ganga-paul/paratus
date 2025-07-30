@@ -174,7 +174,7 @@ done
 
 - Keep 4-5 genomes in `genomelist1.txt`
 
-- keep `genomelist1.txt`, `template.sh`,`batch_generation.sh` in this folder
+- keep `genomelist1.txt`, `template.sh`(Replace /shared/input_genomes/bat1k-bat/ with /shared/input_genomes/paratus-bat/ in --chdir when processing paratus genomes) ,`batch_generation.sh` in this folder
 
 - run `./batch_generation.sh`
 
