@@ -10,7 +10,7 @@ To streamline the process of running RepeatMasker for multiple genomes, we use a
 3.Submits the customised job file using `sbatch`
 
 ## 📁 Required Input File: `genomelist1.txt`
-This file contains a list of genome names. If there's a header row, we skip it using tail -n +2.
+This file contains a list of genome names. If there's a header row, we skip it using `tail -n +2`.
 
 Example contents:
 ```
@@ -20,7 +20,7 @@ mNatMex1.HiC.hap1
 mNycThe2.HiC.hap1.decontam
 ```
 
-Note: The genome names genomelist1.txt in  should match the directory names in /shared/input_genomes/paratus-bat/ and /shared/input_genomes/bat1k-bat/ for Paratus and Bat1k respectively
+Note: The genome names `genomelist1.txt` in  should match the directory names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
 
 ## 📝 Job Template: template1.txt
 This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name. Replace `/shared/input_genomes/paratus-bat` in `--chdir` with
@@ -170,9 +170,9 @@ conda activate prepare_genomes
 time /shared/masking_genomes/RepeatMasker/RepeatMasker -pa 48 -xsmall -s -lib "${new_name_rmodler}/consensi.fa.classified" "${parent_dir}/mMyoTri1.hap1.decontam_renamed.fa"
 ```
 
-- -pa : Parallel execution with 48 threads (make sure to match --cpus-per-task=48 in your SBATCH header)
+- `-pa` : Parallel execution with 48 threads (make sure to match --cpus-per-task=48 in your SBATCH header)
 
-- -lib:classified file path
+- `-lib` :classified file path
 
 ${parent_dir}/mMyoTri1.hap1.decontam_renamed.fa : fasta filepath
 
