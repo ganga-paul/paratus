@@ -1,5 +1,5 @@
 # Step 0: Genome Download and Cleaning
-## 🔄Manually Downloading and Scoping Multiple Genomes for Unwanted Chromosomes##  
+## 🔄Manually Downloading and Scoping Multiple Genomes for Unwanted Chromosomes  
 - Genomes are downloaded from the **S3 path** provided by Paratus using the `aws s3 cp` command.  
 - Downloaded genomes are arranged in a **predetermined directory structure** (explained in detail in Step 1).  
 - Unwanted chromosomes are filtered out during this step.  
