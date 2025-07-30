@@ -82,7 +82,7 @@ done
 
 - `while IFS=, read genome` reads each genome name, one at a time.
 
-- sed "s/xxxx/$genome/g" replaces every instance of xxxx in `template1.txt` with the actual genome name.
+- `sed "s/xxxx/$genome/g"` replaces every instance of xxxx in `template1.txt` with the actual genome name.
 
 - The output is saved to a new job file (e.g., `mMyoTri1_job.txt`).
 
