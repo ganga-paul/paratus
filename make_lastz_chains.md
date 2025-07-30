@@ -256,23 +256,23 @@ echo "Script ended at: $(date)"
 ```
 #SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
 ```
-- Activate conda env
+- **Activate conda env**
 ```
 source /shared/tools/miniconda3/etc/profile.d/conda.sh
 conda activate chaining
 ```
 
-- Remove special characters
+- **Remove special characters**
 ```
 /shared/input_genomes/human/rename_chromosomes.sh mMyoTri1.hap1.decontam_renamed.fa.masked mMyoTri1.hap1.decontam_renamed_mlc.fa.masked
 ```
 
-- Create chromsize file
+- **Create chromsize file**
 ```
 /shared/masking_genomes/ucsc_tools_static/faSize mMyoTri1.hap1.decontam_renamed_mlc.fa.masked mMyoTri1.hap1.decontam.chromsize
 ```
 
-- Run chain command
+- **Run chain command**
 ```
 /shared/masking_genomes/make_lastz_chains/make_chains.py hg38 mMyoTri1.hap1.decontam /shared/input_genomes/human/hg38_renamed.fa \
                         /shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam/mMyoTri1.hap1.decontam_renamed_mlc.fa.masked \
@@ -350,9 +350,9 @@ mMyoTri1.hap1.decontam_pipeline_parameters_set2.json
 
 Place the sanity check scripts in the corresponding directories based on the genome type:
 
-- For Paratus genomes, place the scripts in /shared/input_genomes/paratus-bat/
+- For Paratus genomes, place the scripts in `/shared/input_genomes/paratus-bat/`
 
-- For Bat1K genomes, place the scripts in /shared/input_genomes/bat1k-bat/
+- For Bat1K genomes, place the scripts in `/shared/input_genomes/bat1k-bat/`
 
 make_lastz_v2.sh
 
