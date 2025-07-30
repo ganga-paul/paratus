@@ -38,11 +38,12 @@ mMyoTri1.hap1.decontam
 mNatMex1.HiC.hap1
 mNycThe2.HiC.hap1.decontam
 ```
-Note: The genome names `genomelist1.txt` in  should match the directory names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
+Note: The genome names `genomelist1.txt` in  should match the genome directory names in `/shared/input_genomes/paratus-bat/` and `/shared/input_genomes/bat1k-bat/` for Paratus and Bat1k respectively
 
 ## 📝 Job Template: `template1.txt`
 
-This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name.
+This is your Slurm job script template. Wherever the text xxxx appears, it will be replaced with the genome name. Replace `/shared/input_genomes/bat1k-bat` with `/shared/input_genomes/paratus-bat` when processing Paratus genome
+
 template script: 
 
 ```
@@ -112,16 +113,16 @@ done
 
 ## ▶️ How to Run:
 
-- Create a directory inside `/shared/el-scripts/` 
+- Create a directory inside `/shared/el-scripts/` eg: batch01_builddb_repeatmodeler
 
 - Add the following files to the directory:
 
   - `genomelist1.txt` (containing 20–30 genomes)
 
-  - `template.sh`
+  - `template.sh` (Replace `/shared/input_genomes/bat1k-bat` with `/shared/input_genomes/paratus-bat` when processing Paratus genome)
 
   - `batch_generation.sh`
-
+    
 - Run the script using: `./batch_generation.sh`
 
 ## 🧾 Example Output
@@ -192,11 +193,11 @@ echo "Job completed with exit code $?"
 #SBATCH --chdir=/shared/input_genomes/paratus-bat/mMyoTri1.hap1.decontam
 ```
 
-`input_fa` sets the name of the pre-filtered genome FASTA file to be used
+- `input_fa` sets the name of the pre-filtered genome FASTA file to be used
 
-`renamed_fa` will store a renamed version of the input
+- `renamed_fa` will store a renamed version of the input
 
-`db_name` sets the name of the RepeatModeler database
+- `db_name` sets the name of the RepeatModeler database
 
 - **Rename FASTA Headers** : `awk` command is used to rename the FASTA headers in a file (specifically, the > lines), replacing each sequence header with a standardised name like `>scaffold01`, `>scaffold02`
 ```
