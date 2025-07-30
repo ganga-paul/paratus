@@ -203,7 +203,7 @@ echo "Job completed with exit code $?"
 awk '/^>/ {header="scaffold" sprintf("%02d", ++i); $0=">" header; } 1' $input_fa > $renamed_fa
 ```
 
-- ***Build RepeatModeler Database***
+- **Build RepeatModeler Database**
 ```
 /shared/masking_genomes/RepeatModeler/BuildDatabase -name $db_name $renamed_fa
 ```
@@ -215,7 +215,7 @@ awk '/^>/ {header="scaffold" sprintf("%02d", ++i); $0=">" header; } 1' $input_fa
 
   - Output files will include: .nhr, .nin, .njs, .nnd, .nni, .nog, .nsq files
 
-- ***Run RepeatModeler***
+- **Run RepeatModeler**
 ```
 time /shared/masking_genomes/RepeatModeler/RepeatModeler -threads 72 -database $db_name  -engine ncbi
 ```
