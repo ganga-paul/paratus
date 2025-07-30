@@ -128,10 +128,10 @@ done
 ## 🧾 Example Output
 
 Before running `batch_generation.sh`
-![](classifier_scripts.png)
+![](modelerscripts.png)
 
 After running `batch_generation.sh`
-![](classifiergenerated.png)
+![](modelerscriptsgenerate.png)
 
 For genome `mMyoTri1`, this command creates:
 
@@ -208,13 +208,13 @@ awk '/^>/ {header="scaffold" sprintf("%02d", ++i); $0=">" header; } 1' $input_fa
 ```
 /shared/masking_genomes/RepeatModeler/BuildDatabase -name $db_name $renamed_fa
 ```
-  - Creates a BLAST database that RepeatModeler will use to search for repetitive elements.
+    - Creates a BLAST database that RepeatModeler will use to search for repetitive elements.
 
-  - `-name "$db_name"`: Sets the base name of the database files.
+    - `-name "$db_name"`: Sets the base name of the database files.
 
-  - `"$renamed_fa"`: The input FASTA file.
+    - `"$renamed_fa"`: The input FASTA file.
 
-  - Output files will include: .nhr, .nin, .njs, .nnd, .nni, .nog, .nsq files
+    - Output files will include: .nhr, .nin, .njs, .nnd, .nni, .nog, .nsq files
 
 - **Run RepeatModeler**
 ```
